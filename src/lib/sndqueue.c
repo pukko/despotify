@@ -17,7 +17,8 @@ enum {
     DL_FILLING,
     DL_FILLING_BUSY,
     DL_DRAINING,
-    DL_END_OF_LIST
+    DL_END_OF_LIST,
+    DL_WAIT_FOR_AES
 };
 
 static void shortsleep(void)
@@ -222,7 +223,7 @@ void snd_ioctl (struct despotify_session* ds, int cmd, void *data, int length)
                     ds->dlstate = DL_DRAINING;
                 }
                 else
-                    if (ds->dlstate != DL_END_OF_LIST) {
+                    if (ds->dlstate != DL_END_OF_LIST && ds->dlstate != DL_WAIT_FOR_AES) {
                         DSFYDEBUG("ds->dlstate = DL_FILLING\n");
                         ds->dlstate = DL_FILLING; /* step down from DL_FILLING_BUSY */
                     }
@@ -233,6 +234,21 @@ void snd_ioctl (struct despotify_session* ds, int cmd, void *data, int length)
                 if (!ds->track) {
                     DSFYDEBUG("ds->dlstate = DL_END_OF_LIST\n");
                     ds->dlstate = DL_END_OF_LIST;
+                }
+                else {
+                    /* Wait for AES key */
+                    DSFYDEBUG("ds->dlstate = DL_WAIT_FOR_AES\n");
+                    ds->dlstate = DL_WAIT_FOR_AES;
+                }
+                break;
+
+            case SND_CMD_START:
+                /* We'll get out of draining when cmd_start is issued from 
+                 * aes_callback
+                 */
+                if (ds->dlstate == DL_WAIT_FOR_AES) {
+                    DSFYDEBUG("ds->dlstate = AES -> FILLING (aes fix hack?)\n");
+                    ds->dlstate = DL_FILLING;
                 }
                 break;
         }

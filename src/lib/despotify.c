@@ -357,14 +357,17 @@ static int despotify_substream_callback(CHANNEL * ch,
                 DSFYDEBUG("Stream returned short coutn (%d of %d requested), marking END\n",
                           ch->total_data_len, SUBSTREAM_SIZE);
 
+                /*
+		 * Send SND_CMD_END to stop the ov callback from fetching more
+		 * music until we have got the aes key for the new track
+		 */
+                snd_ioctl(ds, SND_CMD_END, NULL, 0);
+
                 /* find next playable track */
                 do {
                     ds->track = ds->track->next;
                 } while (ds->track && !ds->track->playable);
                 
-                /* Add SND_CMD_END to buffer chain */
-                snd_ioctl(ds, SND_CMD_END, NULL, 0);
-
                 ds->offset = 0;
 
                 int error = 0;
